@@ -16,21 +16,37 @@ The older v1 phase docs are historical reference only. Do not implement deprecat
 
 Build one phase at a time.
 
-For the current build, focus on Phase 1 only: Modern Foundation.
+For the current build, focus on Phase 1.1: Dashboard Reposition and Workflow Preparation.
 
 Do not build:
 
-- Color Palette Picker
+- Live AI generation
 - Reference analysis
-- AI generation routes
-- DESIGN.md compiler
+- Palette generation backend
+- Typography backend
+- DESIGN.md compiler backend
 - Figma export
 - Webflow export
 - One-click deployment
 - Billing
 - Team collaboration
 
-It is okay to scaffold folders and types that make future phases easier, but do not implement future-phase functionality yet.
+It is okay to scaffold folders, types, and UI-only placeholders that make future phases easier, but do not implement future-phase backend functionality yet.
+
+## Source of Truth Priority
+
+Use this order when files conflict:
+
+1. Existing application code and database conventions
+2. `AGENTS.md`
+3. `docs/product-spec-v2.md`
+4. `docs/DESIGN.md`
+5. `docs/architecture.md`
+6. `docs/database-schema.md`
+7. `docs/decisions/*`
+8. Legacy v1 files as methodology/reference only
+
+Legacy v1 files must not override Product Spec v2, `docs/DESIGN.md`, Supabase SSR architecture, current schema, or current build rules.
 
 ## Technical Stack
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Repositioned the dashboard and project detail experience as a dark premium design-system workspace.
+- Added UI-only AI Help, model selector, workflow, typography, and color story preparation surfaces.
+- Preserved existing Supabase SSR auth, protected routes, project ownership checks, and Phase 1 database schema.
 - Organized Clarity documentation into current docs, methodology, legacy materials, prompts, decisions, and assets.
 - Established `docs/DESIGN.md` as the canonical design-intelligence source of truth.
 - Preserved v1 build prompts as legacy reference material.

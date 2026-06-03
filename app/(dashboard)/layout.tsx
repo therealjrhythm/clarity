@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { requireUser } from "@/lib/auth/require-user";
+import { listProjects } from "@/lib/projects/queries";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 
 export const dynamic = "force-dynamic";
@@ -20,6 +21,35 @@ function SetupRequired() {
   );
 }
 
+type AuthUser = Awaited<ReturnType<typeof requireUser>>;
+
+function metadataValue(user: AuthUser, key: string) {
+  const value = user.user_metadata?.[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function firstNameFromUser(user: AuthUser) {
+  const metadataName =
+    metadataValue(user, "first_name") ||
+    metadataValue(user, "name") ||
+    metadataValue(user, "full_name");
+  const fallback = user.email?.split("@")[0].split(/[._-]/)[0] || "Designer";
+  const displayName = metadataName.trim() || fallback;
+
+  return displayName.split(/\s+/)[0] || "Designer";
+}
+
+function fullNameFromUser(user: AuthUser) {
+  const firstName = metadataValue(user, "first_name");
+  const lastName = metadataValue(user, "last_name");
+  const fullName =
+    [firstName, lastName].filter(Boolean).join(" ") ||
+    metadataValue(user, "full_name") ||
+    metadataValue(user, "name");
+
+  return fullName || firstNameFromUser(user);
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -30,6 +60,12 @@ export default async function DashboardLayout({
   }
 
   const user = await requireUser();
+  const projects = await listProjects(user.id);
+  const name = fullNameFromUser(user);
 
-  return <AppShell email={user.email}>{children}</AppShell>;
+  return (
+    <AppShell email={user.email} name={name} projects={projects}>
+      {children}
+    </AppShell>
+  );
 }

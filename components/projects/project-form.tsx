@@ -6,19 +6,29 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function ProjectForm({
   action,
+  defaults,
   project,
   submitLabel,
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  defaults?: {
+    description?: string;
+    name?: string;
+    type?: string;
+  };
   project?: Project;
   submitLabel: string;
 }) {
+  const name = project?.name ?? defaults?.name;
+  const type = project?.type ?? defaults?.type;
+  const description = project?.description ?? defaults?.description ?? "";
+
   return (
     <form action={action} className="space-y-5">
       <div className="space-y-2">
         <Label htmlFor="name">Project name</Label>
         <Input
-          defaultValue={project?.name}
+          defaultValue={name}
           id="name"
           name="name"
           placeholder="Acme launch system"
@@ -28,7 +38,7 @@ export function ProjectForm({
       <div className="space-y-2">
         <Label htmlFor="type">Project type</Label>
         <Input
-          defaultValue={project?.type}
+          defaultValue={type}
           id="type"
           name="type"
           placeholder="Landing page, dashboard, SaaS app"
@@ -38,7 +48,7 @@ export function ProjectForm({
       <div className="space-y-2">
         <Label htmlFor="description">Short description</Label>
         <Textarea
-          defaultValue={project?.description || ""}
+          defaultValue={description}
           id="description"
           name="description"
           placeholder="What is this project meant to become?"

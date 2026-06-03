@@ -10,7 +10,7 @@ export function StatusPill({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border border-line bg-surface px-2.5 py-1 text-xs font-semibold capitalize text-ink-muted",
+        "inline-flex items-center rounded-full border border-line bg-background/55 px-2.5 py-1 text-xs font-semibold capitalize text-ink-muted",
         className,
       )}
     >

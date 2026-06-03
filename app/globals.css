@@ -1,18 +1,35 @@
+@import url("https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 @import "tailwindcss";
 
 :root {
-  --background: #f7f3ec;
-  --foreground: #191713;
-  --surface: #fffaf2;
-  --surface-muted: #ebe3d5;
-  --ink-muted: #6d675f;
-  --line: #d7cdbd;
-  --accent: #245b4f;
-  --accent-foreground: #fffaf2;
-  --accent-soft: #dbe9df;
-  --warning: #9f5a23;
-  --danger: #9b2f2f;
-  --radius: 8px;
+  --bg: #11131b;
+  --bg-2: #0e0f16;
+  --background: #11131b;
+  --foreground: #f6f2ea;
+  --surface: #15171f;
+  --surface-muted: #181a23;
+  --elevated: #101118;
+  --line: #23252f;
+  --line-soft: #1c1e27;
+  --line-strong: #34373f;
+  --ink-muted: #9a9aa2;
+  --ink-subtle: #6b6b73;
+  --text-2: #9a9aa2;
+  --text-3: #6b6b73;
+  --accent: #d9a15e;
+  --accent-foreground: #1a140c;
+  --accent-soft: #2c2623;
+  --accent-blue: #7c9dff;
+  --accent-mint: #8ee6c9;
+  --warning: #e0a45b;
+  --danger: #e06a6a;
+  --success: #88d498;
+  --radius: 12px;
+  --r-lg: 18px;
+  --r-md: 12px;
+  --r-sm: 9px;
+  --font: "Schibsted Grotesk", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
 }
 
 @theme inline {
@@ -20,15 +37,22 @@
   --color-foreground: var(--foreground);
   --color-surface: var(--surface);
   --color-surface-muted: var(--surface-muted);
+  --color-elevated: var(--elevated);
   --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
   --color-line: var(--line);
+  --color-line-soft: var(--line-soft);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent-soft: var(--accent-soft);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-mint: var(--accent-mint);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
-  --font-sans: Arial, Helvetica, sans-serif;
-  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  --color-success: var(--success);
+  --font-sans: var(--font);
+  --font-mono: var(--mono);
 }
 
 * {
@@ -43,12 +67,11 @@ html {
 body {
   min-height: 100%;
   margin: 0;
-  background:
-    linear-gradient(180deg, rgba(255, 250, 242, 0.7), rgba(247, 243, 236, 1) 46%),
-    var(--background);
+  background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font);
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -64,6 +87,52 @@ select {
 }
 
 ::selection {
-  background: var(--accent);
-  color: var(--accent-foreground);
+  background: rgba(217, 161, 94, 0.28);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 4px rgba(217, 161, 94, 0.12);
+}
+
+[data-clarity-prompt] :focus-visible {
+  outline: 0;
+  box-shadow: none;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.5;
+    transform: scale(0.7);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }

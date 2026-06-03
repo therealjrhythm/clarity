@@ -5,16 +5,15 @@ export function LandingHero() {
   return (
     <section className="mx-auto grid min-h-[78vh] max-w-7xl grid-cols-1 gap-10 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.86fr] lg:px-8">
       <div className="flex flex-col justify-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-sm font-semibold uppercase text-accent">
           Clarity
         </p>
-        <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-[1.02] tracking-normal text-foreground sm:text-6xl lg:text-7xl">
+        <h1 className="mt-5 max-w-4xl text-5xl font-semibold leading-[1.02] text-foreground sm:text-6xl lg:text-7xl">
           Design with intention. Build with intelligence.
         </h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-ink-muted">
-          Turn project intent into a durable design-system foundation. Phase 1
-          establishes the secure workspace where future brief, palette,
-          reference, and generation workflows will live.
+          Turn project intent, visual direction, color stories, typography,
+          and references into a durable design-system foundation.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <ButtonLink href="/signup">
@@ -27,7 +26,7 @@ export function LandingHero() {
         </div>
       </div>
       <div className="flex items-center">
-        <div className="w-full rounded-[var(--radius)] border border-line bg-surface p-4 shadow-sm">
+        <div className="w-full rounded-[var(--radius)] border border-line bg-surface p-4 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
           <div className="grid gap-3">
             {[
               "Project brief",

@@ -19,6 +19,26 @@ export function LoginForm({
         </p>
       ) : null}
       <div className="space-y-2">
+        <Label htmlFor="login-name">First name</Label>
+        <Input
+          autoComplete="given-name"
+          id="login-name"
+          name="name"
+          placeholder="Jeremiah"
+          type="text"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="login-last-name">Last name</Label>
+        <Input
+          autoComplete="family-name"
+          id="login-last-name"
+          name="lastName"
+          placeholder="Perry"
+          type="text"
+        />
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" required type="email" />
       </div>

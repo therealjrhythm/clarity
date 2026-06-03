@@ -1,6 +1,7 @@
 # Clarity Architecture
 
-This repository currently implements Phase 1: Modern Foundation.
+This repository currently implements Phase 1: Modern Foundation and Phase 1.1:
+Dashboard Reposition and Workflow Preparation.
 
 ## Stack
 
@@ -62,7 +63,23 @@ The UI includes:
 - project settings page
 - archived project behavior instead of hard-delete-first UX
 
-Future workflow areas are shown only as disabled placeholders.
+## Phase 1.1 UI Preparation
+
+Phase 1.1 repositions the authenticated workspace as a dark, premium creative
+design-system workspace.
+
+The UI may include future-ready, UI-only surfaces for:
+
+- Clarity workflow progress
+- AI Help buttons and panel placeholders
+- provider-agnostic model selector metadata
+- typography recommendation previews
+- color story previews
+- Design Direction Board sections
+
+These surfaces do not call AI providers, persist model preferences, upload
+references, compile DESIGN.md files, generate previews, or write future workflow
+state to the database.
 
 ## Deferred Architecture
 
@@ -71,6 +88,7 @@ The following are intentionally deferred:
 - conversational brief
 - archetype recommendation
 - Color Palette Picker
+- typography backend
 - reference upload and AI analysis
 - DESIGN.md compiler
 - generation jobs and previews

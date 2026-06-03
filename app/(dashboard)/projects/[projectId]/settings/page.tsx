@@ -17,7 +17,7 @@ export default async function ProjectSettingsPage({
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
-        <p className="text-sm font-semibold uppercase tracking-[0.16em] text-accent">
+        <p className="text-sm font-semibold text-accent">
           Settings
         </p>
         <h1 className="mt-2 text-3xl font-semibold">Edit project</h1>

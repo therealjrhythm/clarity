@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+- Repositioned the dashboard and project detail experience as a dark premium design-system workspace.
+- Added UI-only AI Help, model selector, workflow, typography, and color story preparation surfaces.
+- Preserved existing Supabase SSR auth, protected routes, project ownership checks, and Phase 1 database schema.
+- Organized Clarity documentation into current docs, methodology, legacy materials, prompts, decisions, and assets.
+- Established `docs/DESIGN.md` as the canonical design-intelligence source of truth.
+- Preserved v1 build prompts as legacy reference material.
+- Preserved the v3 Design Super-Prompt as methodology and mapped it to the current DESIGN.md framework.
+- Added ADRs for DESIGN.md v4 and legacy methodology handling.
+- Updated AGENTS.md and README.md with source-of-truth guidance.
 - Added Phase 1 Modern Foundation scaffold.
 - Added Next.js App Router, TypeScript, Tailwind CSS v4, and Supabase SSR setup.
 - Added auth pages, protected dashboard routes, and basic project CRUD.

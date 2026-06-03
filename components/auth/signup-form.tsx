@@ -12,6 +12,28 @@ export function SignupForm({ error }: { error?: string }) {
         </p>
       ) : null}
       <div className="space-y-2">
+        <Label htmlFor="signup-name">First name</Label>
+        <Input
+          autoComplete="given-name"
+          id="signup-name"
+          name="name"
+          placeholder="Jeremiah"
+          required
+          type="text"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="signup-last-name">Last name</Label>
+        <Input
+          autoComplete="family-name"
+          id="signup-last-name"
+          name="lastName"
+          placeholder="Perry"
+          required
+          type="text"
+        />
+      </div>
+      <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input id="email" name="email" required type="email" />
       </div>

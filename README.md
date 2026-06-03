@@ -6,7 +6,7 @@ Clarity is an AI-powered design application that turns project intent, visual
 references, color stories, and brand archetypes into production-ready design
 systems and interfaces.
 
-This repository is currently focused on **Phase 1: Modern Foundation** only.
+This repository currently contains the **Phase 1: Modern Foundation** app and is preparing **Phase 1.1: Dashboard Reposition and Workflow Preparation**.
 
 ## Phase 1 Includes
 
@@ -23,16 +23,31 @@ This repository is currently focused on **Phase 1: Modern Foundation** only.
 
 ## Deferred
 
-These are intentionally not implemented in Phase 1:
+These are intentionally not implemented in Phase 1.1:
 
-- Color Palette Picker
-- Reference upload and analysis
+- Live AI generation
+- Palette generation backend
+- Typography backend
+- Reference analysis
 - AI generation routes
-- DESIGN.md compiler
+- DESIGN.md compiler backend
 - Preview/export system
 - Billing
 - Team collaboration
 - Figma, Webflow, or one-click deployment
+
+## Documentation Structure
+
+- `docs/product-spec-v2.md` - Current product specification.
+- `docs/DESIGN.md` - Clarity's design-intelligence source of truth.
+- `docs/architecture.md` - Current technical architecture.
+- `docs/database-schema.md` - Current database schema.
+- `docs/decisions/` - Architecture decision records.
+- `docs/methodology/` - Preserved design methodology, including the v3 Super-Prompt framework.
+- `docs/legacy/` - Historical v1 build prompts and planning docs. These are reference-only.
+- `docs/prompts/` - Current implementation prompts for Codex/Cursor.
+
+Legacy files are preserved for methodology and context, but they are not current implementation instructions.
 
 ## Environment Variables
 

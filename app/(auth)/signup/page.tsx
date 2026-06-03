@@ -13,10 +13,10 @@ export default async function SignupPage({
       <Link className="mb-8 text-sm font-semibold text-accent" href="/">
         Clarity
       </Link>
-      <section className="rounded-[var(--radius)] border border-line bg-surface p-6 shadow-sm">
+      <section className="rounded-[var(--radius)] border border-line bg-surface p-6 shadow-[0_24px_80px_rgba(0,0,0,0.24)]">
         <h1 className="text-2xl font-semibold">Create account</h1>
         <p className="mt-2 text-sm leading-6 text-ink-muted">
-          Start with a secure Phase 1 project workspace.
+          Start with a secure workspace for shaping design systems.
         </p>
         <div className="mt-6">
           <SignupForm error={params.error} />

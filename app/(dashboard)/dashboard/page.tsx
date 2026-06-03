@@ -1,5 +1,6 @@
 import { CommandCenterHome } from "@/components/dashboard/command-center-home";
 import { requireUser } from "@/lib/auth/require-user";
+import { createProject } from "@/lib/projects/actions";
 import { listProjects } from "@/lib/projects/queries";
 
 type AuthUser = Awaited<ReturnType<typeof requireUser>>;
@@ -33,6 +34,7 @@ export default async function DashboardPage({
 
   return (
     <CommandCenterHome
+      action={createProject}
       latestProject={latestProject}
       name={name}
       resetKey={resolvedSearchParams.new}

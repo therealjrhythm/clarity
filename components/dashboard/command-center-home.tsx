@@ -9,6 +9,7 @@ import { PreparationChecklist } from "@/components/dashboard/preparation-checkli
 import { PreparationPreview } from "@/components/dashboard/preparation-preview";
 import {
   clearPendingFoundation,
+  type PendingFoundationContext,
   type PendingFoundationSource,
 } from "@/lib/design/pending-foundation";
 import type { Project } from "@/types/project";
@@ -20,11 +21,6 @@ type QuickAction = {
 };
 
 type PreparationState = "home" | "preparing" | "preview";
-
-type PendingSetup = {
-  source: PendingFoundationSource;
-  title: string;
-};
 
 const quickActions: QuickAction[] = [
   {
@@ -45,10 +41,12 @@ const quickActions: QuickAction[] = [
 ];
 
 export function CommandCenterHome({
+  action,
   latestProject,
   name,
   resetKey,
 }: {
+  action: (formData: FormData) => void | Promise<void>;
   latestProject?: Project;
   name: string;
   resetKey?: string;
@@ -57,7 +55,8 @@ export function CommandCenterHome({
   const [modelId, setModelId] = useState(DEFAULT_AI_MODEL_OPTION_ID);
   const [preparationState, setPreparationState] =
     useState<PreparationState>("home");
-  const [pendingSetup, setPendingSetup] = useState<PendingSetup | null>(null);
+  const [pendingSetup, setPendingSetup] =
+    useState<PendingFoundationContext | null>(null);
   const greeting = useMemo(() => "Let's find the direction", []);
 
   const resetPreparation = useCallback(() => {
@@ -82,6 +81,8 @@ export function CommandCenterHome({
     }
 
     setPendingSetup({
+      createdAt: Date.now(),
+      modelId,
       source,
       title: trimmedTitle,
     });
@@ -109,10 +110,9 @@ export function CommandCenterHome({
             />
           ) : (
             <PreparationPreview
-              modelId={modelId}
+              action={action}
+              context={pendingSetup}
               onBack={resetPreparation}
-              source={pendingSetup.source}
-              title={pendingSetup.title}
             />
           )}
         </div>

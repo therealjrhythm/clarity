@@ -56,7 +56,7 @@ export function PreparationChecklist({
         {title}
       </div>
 
-      <div className="flex gap-4 self-start pl-1.5">
+      <div className="flex min-w-[286px] gap-4 self-center">
         <span className="mt-[5px] h-[11px] w-[11px] shrink-0 animate-[pulse_1.1s_ease-in-out_infinite] rounded-full bg-accent motion-reduce:animate-none" />
         <div className="flex flex-col gap-[11px]">
           {CHECKLIST_STEPS.map((step, index) => {

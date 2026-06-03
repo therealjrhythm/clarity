@@ -101,7 +101,7 @@ export function writePendingFoundation(context: PendingFoundationContext) {
 
 function inferProjectType(title: string) {
   const match = TYPE_PATTERNS.find(([pattern]) => pattern.test(title));
-  return match?.[1] || "Design system";
+  return match?.[1] || "Other";
 }
 
 function titleCase(value: string) {

@@ -84,6 +84,8 @@ supabase/.env
 # Store real exports in Supabase Storage or attach them manually when needed.
 # -------------------------
 .clarity/
+/clarity/
+/clarity 2/
 generated/
 exports/
 artifacts/

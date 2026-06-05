@@ -1,94 +1,45 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Check, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AI_MODEL_OPTIONS } from "@/lib/ai/model-options";
+import type {
+  FoundationQuestionHelpActionResult,
+  FoundationQuestionsActionResult,
+} from "@/lib/briefs/actions";
+import type {
+  FoundationAnswers,
+  FoundationBlockId,
+  FoundationQuestion,
+  FoundationQuestionBlock,
+  FoundationQuestionHelpRequest,
+  FoundationQuestionHelpResult,
+  FoundationQuestionSet,
+  ProjectUnderstanding,
+} from "@/lib/briefs/types";
 import {
   clearPendingFoundation,
   type PendingFoundationContext,
 } from "@/lib/design/pending-foundation";
 
-type FoundationBlockId = "intent" | "audience" | "feel" | "requirements";
+type PreparedFoundationQuestionsResult = Extract<
+  FoundationQuestionsActionResult,
+  { ok: true }
+>;
 
-type FoundationQuestion = {
-  id: string;
-  prompt: string;
-};
-
-type FoundationBlock = {
-  id: FoundationBlockId;
-  title: string;
-  detail: string;
-  captured: string;
-  questions: FoundationQuestion[];
-};
-
-type FoundationAnswers = Record<FoundationBlockId, string[]>;
-
-const FOUNDATION_BLOCKS: FoundationBlock[] = [
-  {
-    id: "intent",
-    title: "Project Intent",
-    detail: "What are we creating, and what should it accomplish?",
-    captured: "Project intent captured",
-    questions: [
-      { id: "creating", prompt: "What are you creating?" },
-      { id: "goal", prompt: "What is the main goal of this project?" },
-      {
-        id: "outcome",
-        prompt: "What should someone do after experiencing it?",
-      },
-    ],
-  },
-  {
-    id: "audience",
-    title: "Audience",
-    detail: "Who is this for, and what do they need?",
-    captured: "Audience direction captured",
-    questions: [
-      { id: "who", prompt: "Who is this for?" },
-      {
-        id: "cares",
-        prompt: "What does this audience care about most?",
-      },
-      {
-        id: "moment",
-        prompt: "What problem, desire, or moment brings them here?",
-      },
-    ],
-  },
-  {
-    id: "feel",
-    title: "Brand Feel",
-    detail: "What should the project feel like?",
-    captured: "Brand feel captured",
-    questions: [
-      { id: "feeling", prompt: "What should the project feel like?" },
-      {
-        id: "references",
-        prompt:
-          "Are there brands, visuals, artists, websites, or references that capture the direction?",
-      },
-    ],
-  },
-  {
-    id: "requirements",
-    title: "Requirements",
-    detail: "What needs to be included or avoided?",
-    captured: "Requirements captured",
-    questions: [
-      {
-        id: "included",
-        prompt: "What content, sections, or features need to be included?",
-      },
-      {
-        id: "constraints",
-        prompt:
-          "Are there any constraints, must-haves, or things to avoid?",
-      },
-    ],
-  },
-];
+type QuestionHelpState =
+  | {
+      results: FoundationQuestionHelpResult[];
+      status: "loading";
+    }
+  | {
+      results: FoundationQuestionHelpResult[];
+      status: "success";
+    }
+  | {
+      message: string;
+      results: FoundationQuestionHelpResult[];
+      status: "error";
+    };
 
 const STOP_WORDS = new Set([
   "a",
@@ -184,8 +135,8 @@ const SYNTHESIS_STEPS = [
   "Preparing focused workspace",
 ];
 
-function createInitialAnswers(): FoundationAnswers {
-  return FOUNDATION_BLOCKS.reduce((nextAnswers, block) => {
+function createInitialAnswers(blocks: FoundationQuestionBlock[]): FoundationAnswers {
+  return blocks.reduce((nextAnswers, block) => {
     return {
       ...nextAnswers,
       [block.id]: block.questions.map(() => ""),
@@ -359,8 +310,10 @@ function limitDescription(value: string) {
 function buildProjectFields(
   context: PendingFoundationContext,
   answers: FoundationAnswers,
+  blocks: FoundationQuestionBlock[],
 ) {
-  const answerText = FOUNDATION_BLOCKS.flatMap((block) => answers[block.id])
+  const answerText = blocks
+    .flatMap((block) => answers[block.id])
     .map(normalizeText)
     .filter(Boolean);
   const descriptionParts = [context.title, ...answerText.slice(0, 5)];
@@ -372,7 +325,15 @@ function buildProjectFields(
   };
 }
 
-function getChips(title: string, blockId: FoundationBlockId) {
+function getChips(
+  title: string,
+  blockId: FoundationBlockId,
+  blockChips: string[],
+) {
+  if (blockChips.length) {
+    return blockChips;
+  }
+
   const lowerTitle = title.toLowerCase();
   const landingPageChips = [
     "Premium clients",
@@ -417,32 +378,229 @@ function getChips(title: string, blockId: FoundationBlockId) {
   ];
 }
 
-function blockHasAnswers(block: FoundationBlock, answers: FoundationAnswers) {
+function blockHasAnswers(
+  block: FoundationQuestionBlock,
+  answers: FoundationAnswers,
+) {
   return answers[block.id].some((answer) => answer.trim().length > 0);
 }
 
 function GuidedQuestionPanel({
+  allAnswers,
   answers,
   block,
   contextTitle,
+  getQuestionHelp,
   onChangeAnswer,
   onClose,
+  onRefineUnderstanding,
   onSave,
   onSelectChip,
+  projectUnderstanding,
+  projectType,
 }: {
+  allAnswers: FoundationAnswers;
   answers: string[];
-  block: FoundationBlock;
+  block: FoundationQuestionBlock;
   contextTitle: string;
+  getQuestionHelp?: (
+    request: FoundationQuestionHelpRequest,
+  ) => Promise<FoundationQuestionHelpActionResult>;
   onChangeAnswer: (questionIndex: number, value: string) => void;
   onClose: () => void;
-  onSave: () => void;
-  onSelectChip: (chip: string) => void;
+  onRefineUnderstanding?: (
+    clarification: string,
+  ) => Promise<{ message?: string; ok: boolean }>;
+  onSave: () => boolean;
+  onSelectChip: (questionIndex: number, chip: string) => void;
+  projectUnderstanding: ProjectUnderstanding;
+  projectType: string;
 }) {
-  const chips = getChips(contextTitle, block.id);
+  const chips = getChips(contextTitle, block.id, block.chips);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(() => {
+    const firstUnanswered = answers.findIndex((answer) => !answer.trim());
+    return firstUnanswered >= 0 ? firstUnanswered : 0;
+  });
+  const [helpByQuestionId, setHelpByQuestionId] = useState<
+    Record<string, QuestionHelpState>
+  >({});
+  const [followUpByQuestionId, setFollowUpByQuestionId] = useState<
+    Record<string, string>
+  >({});
+  const [understandingConfirmed, setUnderstandingConfirmed] = useState(
+    block.id !== "intent",
+  );
+  const [isEditingUnderstanding, setIsEditingUnderstanding] = useState(false);
+  const [understandingDraft, setUnderstandingDraft] = useState(
+    projectUnderstanding.normalizedPromptSummary,
+  );
+  const [understandingError, setUnderstandingError] = useState("");
+  const [understandingLoading, setUnderstandingLoading] = useState(false);
+  const [validationMessage, setValidationMessage] = useState("");
+  const currentQuestion =
+    block.questions[currentQuestionIndex] || block.questions[0];
+  const currentAnswer = answers[currentQuestionIndex] || "";
+  const currentHelpState = currentQuestion
+    ? helpByQuestionId[currentQuestion.id]
+    : undefined;
+  const currentHelpResults = currentHelpState?.results || [];
+  const latestHelpResult = currentHelpResults.at(-1);
+  const currentFollowUp = currentQuestion
+    ? followUpByQuestionId[currentQuestion.id] || ""
+    : "";
+  const currentAnswered = currentAnswer.trim().length > 0;
+  const isLastQuestion = currentQuestionIndex === block.questions.length - 1;
+
+  async function requestQuestionHelp(
+    question: FoundationQuestion,
+    questionIndex: number,
+    userFollowUp = "",
+  ) {
+    if (!getQuestionHelp) {
+      return;
+    }
+
+    const previousResults = helpByQuestionId[question.id]?.results || [];
+    setHelpByQuestionId((currentHelp) => ({
+      ...currentHelp,
+      [question.id]: {
+        results: currentHelp[question.id]?.results || [],
+        status: "loading",
+      },
+    }));
+
+    const helpRequest: FoundationQuestionHelpRequest = {
+      allAnswers,
+      blockId: block.id,
+      blockTitle: block.title,
+      currentAnswer: answers[questionIndex] || "",
+      currentBlockAnswers: answers,
+      currentQuestionIndex: questionIndex,
+      initialPrompt: contextTitle,
+      previousAiSuggestions: previousResults,
+      projectUnderstanding,
+      projectType,
+      questionId: question.id,
+      questionPrompt: question.prompt,
+      selectedChips: chips,
+      totalQuestions: block.questions.length,
+      userFollowUp,
+    };
+
+    try {
+      const result = await getQuestionHelp(helpRequest);
+
+      if (!result.ok) {
+        setHelpByQuestionId((currentHelp) => ({
+          ...currentHelp,
+          [question.id]: {
+            message: result.error.message,
+            results: currentHelp[question.id]?.results || [],
+            status: "error",
+          },
+        }));
+        return;
+      }
+
+      setHelpByQuestionId((currentHelp) => ({
+        ...currentHelp,
+        [question.id]: {
+          results: [
+            ...(currentHelp[question.id]?.results || []),
+            result.data,
+          ],
+          status: "success",
+        },
+      }));
+      setFollowUpByQuestionId((currentFollowUps) => ({
+        ...currentFollowUps,
+        [question.id]: "",
+      }));
+    } catch {
+      setHelpByQuestionId((currentHelp) => ({
+        ...currentHelp,
+        [question.id]: {
+          message:
+            "Clarity couldn’t generate AI help for this answer. You can try again or write your answer manually.",
+          results: currentHelp[question.id]?.results || [],
+          status: "error",
+        },
+      }));
+    }
+  }
+
+  async function refineUnderstanding() {
+    if (!onRefineUnderstanding || !understandingDraft.trim()) {
+      return;
+    }
+
+    setUnderstandingLoading(true);
+    setUnderstandingError("");
+    const result = await onRefineUnderstanding(understandingDraft.trim());
+    setUnderstandingLoading(false);
+
+    if (!result.ok) {
+      setUnderstandingError(
+        result.message ||
+          "Clarity couldn’t update the project understanding. Please try again.",
+      );
+      return;
+    }
+
+    setUnderstandingConfirmed(true);
+    setIsEditingUnderstanding(false);
+  }
+
+  function goToPreviousQuestion() {
+    setValidationMessage("");
+    setCurrentQuestionIndex((index) => Math.max(0, index - 1));
+  }
+
+  function goToNextQuestion() {
+    if (!currentAnswered) {
+      setValidationMessage("Add an answer to continue.");
+      return;
+    }
+
+    setValidationMessage("");
+    setCurrentQuestionIndex((index) =>
+      Math.min(block.questions.length - 1, index + 1),
+    );
+  }
+
+  function finishBlock() {
+    if (!currentAnswered) {
+      setValidationMessage("Add an answer to continue.");
+      return;
+    }
+
+    const saved = onSave();
+    if (!saved) {
+      setValidationMessage("Answer every question before finishing this block.");
+    }
+  }
+
+  function setQuestionAnswer(answer: string) {
+    onChangeAnswer(currentQuestionIndex, answer);
+    if (answer.trim()) {
+      setValidationMessage("");
+    }
+  }
+
+  function setCurrentFollowUp(value: string) {
+    if (!currentQuestion) {
+      return;
+    }
+
+    setFollowUpByQuestionId((currentFollowUps) => ({
+      ...currentFollowUps,
+      [currentQuestion.id]: value,
+    }));
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/70 px-5 py-8 backdrop-blur-md">
-      <section className="w-full max-w-[620px] animate-[fadeUp_0.28s_ease] rounded-[20px] border border-line bg-[rgba(18,19,26,0.96)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.42)]">
+      <section className="max-h-[calc(100vh-64px)] w-full max-w-[660px] animate-[fadeUp_0.28s_ease] overflow-y-auto rounded-[20px] border border-accent/45 bg-[rgba(18,19,26,0.96)] p-5 shadow-[0_24px_90px_rgba(0,0,0,0.42)] ring-1 ring-accent/30">
         <div className="mb-5 flex items-start justify-between gap-5">
           <div>
             <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-accent">
@@ -465,44 +623,294 @@ function GuidedQuestionPanel({
           </button>
         </div>
 
-        <div className="space-y-4">
-          {block.questions.map((question, index) => (
-            <label className="block space-y-2" key={question.id}>
-              <span className="text-sm font-medium text-foreground">
-                {question.prompt}
-              </span>
-              <textarea
-                className="min-h-[74px] w-full resize-none rounded-[14px] border border-line bg-background/65 px-4 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-ink-subtle focus:border-accent/50 focus:bg-background/80"
-                onChange={(event) => onChangeAnswer(index, event.target.value)}
-                placeholder="Add a focused answer..."
-                value={answers[index] || ""}
-              />
-            </label>
-          ))}
+        {block.id === "intent" && !understandingConfirmed ? (
+          <div className="space-y-4">
+            <section className="rounded-[16px] border border-accent/30 bg-accent/10 p-4">
+              <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-accent">
+                Confirm Understanding
+              </p>
+              <p className="mt-3 text-sm leading-6 text-foreground">
+                I understand that you want to build{" "}
+                <span className="font-semibold">
+                  {projectUnderstanding.projectType}
+                </span>
+                {projectUnderstanding.businessType
+                  ? ` for ${projectUnderstanding.businessType}`
+                  : ""}
+                {projectUnderstanding.userRole
+                  ? ` as a ${projectUnderstanding.userRole}`
+                  : ""}
+                .
+              </p>
+              {projectUnderstanding.missingDetails.length ? (
+                <p className="mt-2 text-sm leading-6 text-ink-muted">
+                  I still need to confirm{" "}
+                  {projectUnderstanding.missingDetails.slice(0, 3).join(", ")}.
+                </p>
+              ) : null}
+            </section>
+
+            {isEditingUnderstanding ? (
+              <div className="space-y-3">
+                <label className="block space-y-2">
+                  <span className="text-sm font-semibold text-foreground">
+                    Clarify the project understanding
+                  </span>
+                  <textarea
+                    className="min-h-[118px] w-full resize-none rounded-[16px] border border-line bg-background/65 px-4 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-ink-subtle focus:border-accent/50 focus:bg-background/80"
+                    onChange={(event) =>
+                      setUnderstandingDraft(event.target.value)
+                    }
+                    placeholder="Clarify what Clarity should understand before asking foundation questions..."
+                    value={understandingDraft}
+                  />
+                </label>
+                {understandingError ? (
+                  <p className="rounded-[12px] border border-danger/35 bg-danger/10 px-3 py-2 text-sm text-foreground">
+                    {understandingError}
+                  </p>
+                ) : null}
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-[#efbd78] disabled:cursor-wait disabled:opacity-60"
+                    disabled={understandingLoading || !understandingDraft.trim()}
+                    onClick={refineUnderstanding}
+                    type="button"
+                  >
+                    {understandingLoading
+                      ? "Updating understanding..."
+                      : "Update understanding"}
+                  </button>
+                  <button
+                    className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius)] border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-line-strong hover:bg-surface-muted"
+                    onClick={() => setIsEditingUnderstanding(false)}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-[#efbd78]"
+                  onClick={() => setUnderstandingConfirmed(true)}
+                  type="button"
+                >
+                  Yes, continue
+                </button>
+                <button
+                  className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius)] border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-line-strong hover:bg-surface-muted"
+                  onClick={() => setIsEditingUnderstanding(true)}
+                  type="button"
+                >
+                  Edit understanding
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+        <div className="mb-4">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-accent">
+              Question {currentQuestionIndex + 1} of {block.questions.length}
+            </p>
+            <p className="text-xs text-ink-subtle">
+              All answers are required.
+            </p>
+          </div>
+          <div className="h-1.5 overflow-hidden rounded-full bg-surface-muted">
+            <div
+              className="h-full rounded-full bg-accent transition-[width] duration-200"
+              style={{
+                width: `${((currentQuestionIndex + 1) / block.questions.length) * 100}%`,
+              }}
+            />
+          </div>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-2">
-          {chips.map((chip) => (
-            <button
-              className="inline-flex h-8 items-center rounded-full border border-line bg-surface px-3 text-xs font-medium text-ink-muted transition hover:border-accent/50 hover:text-foreground"
-              key={chip}
-              onClick={() => onSelectChip(chip)}
-              type="button"
-            >
-              {chip}
-            </button>
-          ))}
-        </div>
-
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          <button
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground shadow-[0_12px_34px_rgba(216,161,93,0.18)] transition hover:bg-[#efbd78]"
-            onClick={onSave}
-            type="button"
+        <div className="space-y-3">
+          <label
+            className="block text-[18px] font-semibold leading-[1.35] tracking-[-0.015em] text-foreground"
+            htmlFor={`${block.id}-${currentQuestion.id}`}
           >
-            Save {block.title}
-            <Check size={16} aria-hidden />
-          </button>
+            {currentQuestion.prompt}
+          </label>
+          <textarea
+            id={`${block.id}-${currentQuestion.id}`}
+            className="min-h-[118px] w-full resize-none rounded-[16px] border border-line bg-background/65 px-4 py-3 text-sm leading-6 text-foreground outline-none transition placeholder:text-ink-subtle focus:border-accent/50 focus:bg-background/80"
+            onChange={(event) => setQuestionAnswer(event.target.value)}
+            placeholder="Add a focused answer..."
+            value={currentAnswer}
+          />
+          {!currentAnswered ? (
+            <p className="text-xs text-ink-subtle">
+              {validationMessage || "Add an answer to continue."}
+            </p>
+          ) : validationMessage ? (
+            <p className="text-xs text-ink-subtle">{validationMessage}</p>
+          ) : null}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {getQuestionHelp ? (
+              <button
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-accent/35 bg-accent/10 px-3 text-[11px] font-semibold text-accent transition hover:border-accent/60 hover:bg-accent/15 disabled:cursor-wait disabled:opacity-70"
+                disabled={currentHelpState?.status === "loading"}
+                onClick={() =>
+                  requestQuestionHelp(currentQuestion, currentQuestionIndex)
+                }
+                type="button"
+              >
+                <Sparkles size={13} aria-hidden />
+                {currentHelpState?.status === "loading"
+                  ? "Thinking..."
+                  : "Help with AI"}
+              </button>
+            ) : null}
+            {chips.map((chip) => (
+              <button
+                className="inline-flex h-8 items-center rounded-full border border-line bg-surface px-3 text-xs font-medium text-ink-muted transition hover:border-accent/50 hover:text-foreground"
+                key={chip}
+                onClick={() => onSelectChip(currentQuestionIndex, chip)}
+                type="button"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {latestHelpResult ||
+        currentHelpState?.status === "loading" ||
+        currentHelpState?.status === "error" ? (
+          <section className="mt-5 rounded-[16px] border border-accent/25 bg-accent/10 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="font-mono text-[10px] uppercase tracking-[0.12em] text-accent">
+                AI inspiration for this answer
+              </p>
+              {latestHelpResult ? (
+                <span className="text-[11px] text-ink-subtle">AI-assisted</span>
+              ) : null}
+            </div>
+
+            {latestHelpResult ? (
+              <div className="space-y-3">
+                <p className="text-sm leading-6 text-ink-muted">
+                  {latestHelpResult.intro}
+                </p>
+                <div className="space-y-2">
+                  {latestHelpResult.options.map((option) => (
+                    <article
+                      className="rounded-[13px] border border-line bg-background/45 p-3"
+                      key={option.id}
+                    >
+                      <div className="mb-2 flex items-start justify-between gap-3">
+                        <h3 className="text-sm font-semibold text-foreground">
+                          {option.label}
+                        </h3>
+                        <button
+                          className="inline-flex h-7 shrink-0 items-center rounded-full border border-accent/35 px-2.5 text-[11px] font-semibold text-accent transition hover:border-accent/60 hover:bg-accent/10"
+                          onClick={() => setQuestionAnswer(option.answer)}
+                          type="button"
+                        >
+                          Use this answer
+                        </button>
+                      </div>
+                      <p className="text-sm leading-6 text-ink-muted">
+                        {option.answer}
+                      </p>
+                      <p className="mt-2 text-xs leading-5 text-ink-subtle">
+                        {option.rationale}
+                      </p>
+                    </article>
+                  ))}
+                </div>
+                <article className="rounded-[13px] border border-accent/35 bg-background/55 p-3">
+                  <div className="mb-2 flex items-start justify-between gap-3">
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Best fit
+                    </h3>
+                    <button
+                      className="inline-flex h-7 shrink-0 items-center rounded-full border border-accent/35 bg-accent/10 px-2.5 text-[11px] font-semibold text-accent transition hover:border-accent/60 hover:bg-accent/15"
+                      onClick={() => setQuestionAnswer(latestHelpResult.bestFit.answer)}
+                      type="button"
+                    >
+                      Use this answer
+                    </button>
+                  </div>
+                  <p className="text-sm leading-6 text-ink-muted">
+                    {latestHelpResult.bestFit.answer}
+                  </p>
+                  <p className="mt-2 text-xs leading-5 text-ink-subtle">
+                    {latestHelpResult.bestFit.rationale}
+                  </p>
+                </article>
+                {latestHelpResult.followUpQuestion ? (
+                  <p className="rounded-[12px] border border-line bg-background/35 px-3 py-2 text-sm leading-6 text-ink-muted">
+                    {latestHelpResult.followUpQuestion}
+                  </p>
+                ) : null}
+                <div className="flex flex-col gap-2">
+                  <label
+                    className="text-xs font-medium text-ink-muted"
+                    htmlFor={`${block.id}-${currentQuestion.id}-follow-up`}
+                  >
+                    Ask a follow-up for this answer
+                  </label>
+                  <textarea
+                    className="min-h-[62px] w-full resize-none rounded-[13px] border border-line bg-background/65 px-3 py-2 text-sm leading-5 text-foreground outline-none transition placeholder:text-ink-subtle focus:border-accent/50"
+                    id={`${block.id}-${currentQuestion.id}-follow-up`}
+                    onChange={(event) => setCurrentFollowUp(event.target.value)}
+                    placeholder="Make this more premium, combine options, or sharpen the audience..."
+                    value={currentFollowUp}
+                  />
+                  <button
+                    className="inline-flex min-h-9 items-center justify-center rounded-full border border-accent/35 px-3 text-xs font-semibold text-accent transition hover:border-accent/60 hover:bg-accent/10 disabled:cursor-not-allowed disabled:opacity-50 sm:self-start"
+                    disabled={
+                      !currentFollowUp.trim() ||
+                      currentHelpState?.status === "loading"
+                    }
+                    onClick={() =>
+                      requestQuestionHelp(
+                        currentQuestion,
+                        currentQuestionIndex,
+                        currentFollowUp,
+                      )
+                    }
+                    type="button"
+                  >
+                    Ask follow-up
+                  </button>
+                </div>
+              </div>
+            ) : null}
+
+            {currentHelpState?.status === "loading" ? (
+              <p className="text-sm leading-6 text-ink-muted">
+                Clarity is preparing focused answer options...
+              </p>
+            ) : null}
+            {currentHelpState?.status === "error" ? (
+              <div className="mt-3 rounded-[12px] border border-line bg-surface px-3 py-3">
+                <p className="text-xs leading-5 text-ink-muted">
+                  {currentHelpState.message}
+                </p>
+                <button
+                  className="mt-3 inline-flex h-8 items-center rounded-full border border-accent/35 px-3 text-xs font-semibold text-accent transition hover:border-accent/60 hover:bg-accent/10"
+                  onClick={() =>
+                    requestQuestionHelp(currentQuestion, currentQuestionIndex)
+                  }
+                  type="button"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
           <button
             className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius)] border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-line-strong hover:bg-surface-muted"
             onClick={onClose}
@@ -510,7 +918,31 @@ function GuidedQuestionPanel({
           >
             Back to foundation
           </button>
+          {currentQuestionIndex > 0 ? (
+            <button
+              className="inline-flex min-h-11 flex-1 items-center justify-center rounded-[var(--radius)] border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-line-strong hover:bg-surface-muted"
+              onClick={goToPreviousQuestion}
+              type="button"
+            >
+              Previous
+            </button>
+          ) : null}
+          <button
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground shadow-[0_12px_34px_rgba(216,161,93,0.18)] transition enabled:hover:bg-[#efbd78] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!currentAnswered}
+            onClick={isLastQuestion ? finishBlock : goToNextQuestion}
+            type="button"
+          >
+            {isLastQuestion ? "Finish" : "Next"}
+            {isLastQuestion ? (
+              <Check size={16} aria-hidden />
+            ) : (
+              <ArrowRight size={16} aria-hidden />
+            )}
+          </button>
         </div>
+          </>
+        )}
       </section>
     </div>
   );
@@ -572,15 +1004,31 @@ function SynthesisChecklist() {
 export function GuidedProjectFoundation({
   action,
   context,
+  generateQuestions,
+  getQuestionHelp,
+  initialQuestionResult,
   onBack,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   context: PendingFoundationContext;
+  generateQuestions?: (prompt: string) => Promise<FoundationQuestionsActionResult>;
+  getQuestionHelp?: (
+    request: FoundationQuestionHelpRequest,
+  ) => Promise<FoundationQuestionHelpActionResult>;
+  initialQuestionResult?: PreparedFoundationQuestionsResult | null;
   onBack?: () => void;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [questionSet, setQuestionSet] = useState<FoundationQuestionSet | null>(
+    () => initialQuestionResult?.data || null,
+  );
+  const [questionStatus, setQuestionStatus] = useState<"api" | "error" | "loading">(
+    initialQuestionResult ? "api" : "loading",
+  );
+  const [questionError, setQuestionError] = useState("");
+  const [analysisRunId, setAnalysisRunId] = useState(0);
   const [answers, setAnswers] = useState<FoundationAnswers>(() =>
-    createInitialAnswers(),
+    questionSet ? createInitialAnswers(questionSet.blocks) : ({} as FoundationAnswers),
   );
   const [completedBlocks, setCompletedBlocks] = useState<FoundationBlockId[]>(
     [],
@@ -589,18 +1037,78 @@ export function GuidedProjectFoundation({
     null,
   );
   const [isSynthesizing, setIsSynthesizing] = useState(false);
-  const model =
-    AI_MODEL_OPTIONS.find((option) => option.id === context.modelId) ||
-    AI_MODEL_OPTIONS[0];
+  const foundationBlocks = useMemo(() => questionSet?.blocks || [], [questionSet]);
   const activeBlock =
-    FOUNDATION_BLOCKS.find((block) => block.id === activeBlockId) || null;
+    foundationBlocks.find((block) => block.id === activeBlockId) || null;
   const firstIncompleteBlock =
-    FOUNDATION_BLOCKS.find((block) => !completedBlocks.includes(block.id)) ||
+    foundationBlocks.find((block) => !completedBlocks.includes(block.id)) ||
     null;
   const projectFields = useMemo(
-    () => buildProjectFields(context, answers),
-    [answers, context],
+    () => buildProjectFields(context, answers, foundationBlocks),
+    [answers, context, foundationBlocks],
   );
+
+  useEffect(() => {
+    let active = true;
+
+    if (initialQuestionResult) {
+      setQuestionSet(initialQuestionResult.data);
+      setAnswers(createInitialAnswers(initialQuestionResult.data.blocks));
+      setCompletedBlocks([]);
+      setActiveBlockId(null);
+      setQuestionError("");
+      setQuestionStatus("api");
+
+      return () => {
+        active = false;
+      };
+    }
+
+    if (!generateQuestions) {
+      setQuestionStatus("error");
+      setQuestionError(
+        "Clarity couldn’t analyze your project. Please try again.",
+      );
+      return () => {
+        active = false;
+      };
+    }
+
+    setQuestionStatus("loading");
+    setQuestionError("");
+    generateQuestions(context.title)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        if (!result.ok) {
+          setQuestionStatus("error");
+          setQuestionError(result.error.message);
+          return;
+        }
+
+        setQuestionSet(result.data);
+        setAnswers(createInitialAnswers(result.data.blocks));
+        setCompletedBlocks([]);
+        setActiveBlockId(null);
+        setQuestionStatus("api");
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setQuestionStatus("error");
+        setQuestionError(
+          "Clarity couldn’t analyze your project. Please try again.",
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [analysisRunId, context.title, generateQuestions, initialQuestionResult]);
 
   useEffect(() => {
     if (!isSynthesizing) {
@@ -615,6 +1123,41 @@ export function GuidedProjectFoundation({
 
     return () => window.clearTimeout(submitTimer);
   }, [isSynthesizing]);
+
+  function retryAnalysis() {
+    setQuestionSet(null);
+    setQuestionError("");
+    setQuestionStatus("loading");
+    setAnalysisRunId(Date.now());
+  }
+
+  async function refineUnderstanding(clarification: string) {
+    if (!generateQuestions) {
+      return {
+        message: "Clarity couldn’t update the project understanding. Please try again.",
+        ok: false,
+      };
+    }
+
+    const refinedPrompt = `${context.title}\n\nUser clarification:\n${clarification}`;
+    const result = await generateQuestions(refinedPrompt);
+
+    if (!result.ok) {
+      return {
+        message: result.error.message,
+        ok: false,
+      };
+    }
+
+    setQuestionSet(result.data);
+    setAnswers(createInitialAnswers(result.data.blocks));
+    setCompletedBlocks([]);
+    setActiveBlockId("intent");
+    setQuestionError("");
+    setQuestionStatus("api");
+
+    return { ok: true };
+  }
 
   function updateAnswer(questionIndex: number, value: string) {
     if (!activeBlock) {
@@ -632,18 +1175,15 @@ export function GuidedProjectFoundation({
     });
   }
 
-  function appendChip(chip: string) {
+  function appendChip(questionIndex: number, chip: string) {
     if (!activeBlock) {
       return;
     }
 
     setAnswers((currentAnswers) => {
       const blockAnswers = [...currentAnswers[activeBlock.id]];
-      const blankIndex = blockAnswers.findIndex((answer) => !answer.trim());
-      const targetIndex =
-        blankIndex >= 0 ? blankIndex : Math.max(0, blockAnswers.length - 1);
-      const currentValue = blockAnswers[targetIndex] || "";
-      blockAnswers[targetIndex] = currentValue
+      const currentValue = blockAnswers[questionIndex] || "";
+      blockAnswers[questionIndex] = currentValue
         ? `${currentValue}, ${chip}`
         : chip;
 
@@ -656,24 +1196,103 @@ export function GuidedProjectFoundation({
 
   function saveActiveBlock() {
     if (!activeBlock) {
-      return;
+      return false;
     }
 
+    const trimmedAnswers = answers[activeBlock.id].map(normalizeText);
+    if (
+      trimmedAnswers.length < activeBlock.questions.length ||
+      trimmedAnswers.some((answer) => !answer)
+    ) {
+      return false;
+    }
+
+    setAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [activeBlock.id]: trimmedAnswers,
+    }));
     setCompletedBlocks((currentBlocks) =>
       currentBlocks.includes(activeBlock.id)
         ? currentBlocks
         : [...currentBlocks, activeBlock.id],
     );
     setActiveBlockId(null);
+    return true;
   }
 
   function continueToProject() {
-    if (firstIncompleteBlock) {
-      setActiveBlockId(firstIncompleteBlock.id);
+    if (firstIncompleteBlock || !questionSet) {
       return;
     }
 
     setIsSynthesizing(true);
+  }
+
+  if (!questionSet || questionStatus === "loading" || questionStatus === "error") {
+    return (
+      <div className="w-full max-w-[780px] animate-[fadeUp_0.45s_ease] pt-2">
+        {onBack ? (
+          <button
+            className="mb-6 inline-flex items-center gap-[7px] whitespace-nowrap text-[13px] text-ink-subtle transition-colors duration-150 hover:text-foreground"
+            onClick={onBack}
+            type="button"
+          >
+            <ArrowLeft size={16} aria-hidden />
+            Back to start
+          </button>
+        ) : null}
+
+        <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.13em] text-accent">
+          Project Foundation · AI-guided
+        </p>
+        <h1 className="mb-[14px] max-w-[720px] text-[30px] font-semibold leading-[1.18] tracking-[-0.02em] text-foreground">
+          <HighlightTitle text={context.title} />
+        </h1>
+
+        {questionStatus === "error" ? (
+          <section className="mt-7 rounded-[22px] border border-line bg-surface p-6 shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
+            <h2 className="text-2xl font-semibold tracking-[-0.02em]">
+              Clarity couldn’t analyze your project.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-ink-muted">
+              {questionError ||
+                "Please try again. If this keeps happening, try rephrasing your prompt."}
+            </p>
+            <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+              <button
+                className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-[#efbd78]"
+                onClick={retryAnalysis}
+                type="button"
+              >
+                Retry analysis
+              </button>
+              {onBack ? (
+                <button
+                  className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-line-strong hover:bg-surface-muted"
+                  onClick={onBack}
+                  type="button"
+                >
+                  Back to prompt
+                </button>
+              ) : null}
+            </div>
+          </section>
+        ) : (
+          <section className="mt-7 rounded-[22px] border border-line bg-surface p-6 shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
+            <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-accent">
+              Project Analysis
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em]">
+              Clarity is reading your intent.
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-ink-muted">
+              The guided foundation will appear once Clarity has a valid project
+              understanding.
+            </p>
+          </section>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -690,7 +1309,7 @@ export function GuidedProjectFoundation({
       ) : null}
 
       <p className="mb-3 font-mono text-[11px] uppercase tracking-[0.13em] text-accent">
-        Project Foundation · {model.label}
+        Project Foundation · AI-guided
       </p>
       <h1 className="mb-[14px] max-w-[720px] text-[30px] font-semibold leading-[1.18] tracking-[-0.02em] text-foreground">
         <HighlightTitle text={context.title} />
@@ -699,22 +1318,42 @@ export function GuidedProjectFoundation({
         Clarity will ask a few focused questions to shape the foundation of
         your project before creating your workspace.
       </p>
+      <p className="mb-4 text-sm font-medium text-ink-subtle">
+        Clarity has analyzed your prompt. Confirm the essentials before creating
+        your workspace.
+      </p>
 
       <div className="mb-[18px] grid gap-3 sm:grid-cols-2">
-        {FOUNDATION_BLOCKS.map((block, index) => {
+        {foundationBlocks.map((block, index) => {
           const complete = completedBlocks.includes(block.id);
           const active = firstIncompleteBlock?.id === block.id && !complete;
-          const status = complete ? "Complete" : active ? "In progress" : "Ready";
+          const locked = !complete && index > completedBlocks.length;
+          const status = complete
+            ? "Complete"
+            : locked
+              ? "Upcoming"
+              : active
+                ? "In progress"
+                : "Ready";
 
           return (
             <button
-              className={`relative flex min-h-[118px] items-start gap-[14px] rounded-[14px] border bg-surface p-[18px] text-left transition hover:border-accent/40 ${
+              className={`relative flex min-h-[118px] items-start gap-[14px] rounded-[14px] border bg-surface p-[18px] text-left transition ${
                 active
-                  ? "border-accent/40 bg-[linear-gradient(180deg,var(--surface),var(--accent-soft))]"
+                  ? "border-accent/45 bg-[linear-gradient(180deg,var(--surface),var(--accent-soft))] ring-1 ring-accent/35"
                   : "border-line"
+              } ${
+                locked
+                  ? "cursor-not-allowed opacity-45"
+                  : "hover:border-accent/40"
               }`}
+              disabled={locked}
               key={block.id}
-              onClick={() => setActiveBlockId(block.id)}
+              onClick={() => {
+                if (!locked) {
+                  setActiveBlockId(block.id);
+                }
+              }}
               type="button"
             >
               <span className="pt-0.5 font-mono text-[13px] text-accent">
@@ -741,7 +1380,7 @@ export function GuidedProjectFoundation({
           DESIGN.md Preview
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
-          {FOUNDATION_BLOCKS.map((block) => {
+          {foundationBlocks.map((block) => {
             const complete = completedBlocks.includes(block.id);
             return (
               <div
@@ -772,7 +1411,8 @@ export function GuidedProjectFoundation({
       ) : (
         <div className="mt-6 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
           <button
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground shadow-[0_12px_34px_rgba(216,161,93,0.18)] transition hover:bg-[#efbd78]"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground shadow-[0_12px_34px_rgba(216,161,93,0.18)] transition enabled:hover:bg-[#efbd78] disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={Boolean(firstIncompleteBlock)}
             onClick={continueToProject}
             type="button"
           >
@@ -794,6 +1434,16 @@ export function GuidedProjectFoundation({
       <form action={action} aria-hidden className="hidden" ref={formRef}>
         <input name="name" readOnly value={projectFields.name} />
         <input name="type" readOnly value={projectFields.type} />
+        <input
+          name="foundation_answers"
+          readOnly
+          value={JSON.stringify(answers)}
+        />
+        <input
+          name="prompt_analysis"
+          readOnly
+          value={JSON.stringify(questionSet)}
+        />
         <textarea
           name="description"
           readOnly
@@ -803,13 +1453,19 @@ export function GuidedProjectFoundation({
 
       {activeBlock ? (
         <GuidedQuestionPanel
+          allAnswers={answers}
           answers={answers[activeBlock.id]}
           block={activeBlock}
           contextTitle={context.title}
+          getQuestionHelp={getQuestionHelp}
+          key={`${activeBlock.id}-${questionSet.generatedAt}`}
           onChangeAnswer={updateAnswer}
           onClose={() => setActiveBlockId(null)}
+          onRefineUnderstanding={refineUnderstanding}
           onSave={saveActiveBlock}
           onSelectChip={appendChip}
+          projectUnderstanding={questionSet.projectUnderstanding}
+          projectType={questionSet.projectType}
         />
       ) : null}
     </div>

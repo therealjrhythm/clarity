@@ -1,7 +1,7 @@
 import type { ColorStory } from "@/lib/design/types";
 
-function tokenValue(story: ColorStory, role: string, fallback: string) {
-  return story.tokens.find((token) => token.role === role)?.value || fallback;
+function tokenValue(story: ColorStory, role: string, defaultValue: string) {
+  return story.tokens.find((token) => token.role === role)?.value || defaultValue;
 }
 
 export function PaletteMiniUI({ story }: { story: ColorStory }) {

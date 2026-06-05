@@ -1,7 +1,8 @@
 # Clarity Architecture
 
-This repository currently implements Phase 1: Modern Foundation and Phase 1.1:
-Dashboard Reposition and Workflow Preparation.
+This repository currently implements Phase 1: Modern Foundation, Phase 1.1:
+Dashboard Reposition and Workflow Preparation, and Phase 2: AI-Assisted Brand
+Brief.
 
 ## Stack
 
@@ -11,6 +12,7 @@ Dashboard Reposition and Workflow Preparation.
 - Supabase Auth, Postgres, and Storage
 - `@supabase/ssr`
 - Zod validation for project forms
+- Gemini API for the tightly scoped Brand Brief AI layer
 
 ## Auth Flow
 
@@ -43,6 +45,36 @@ Project reads and mutations use both RLS and app-layer checks:
 - `getOwnedProject(projectId, userId)` verifies ownership
 - `requireOwnedProject(projectId, userId)` returns 404 for non-owned projects
 - project update/archive actions verify ownership before writing
+- Brand Brief queries/actions verify ownership through the associated project
+  before reading or mutating `project_briefs`
+
+## Phase 2 Brand Brief
+
+Phase 2 adds the first live AI layer, scoped to Brand Brief creation.
+
+The server-only Gemini adapter lives in `lib/ai/gemini.ts` and reads:
+
+- `GEMINI_API_KEY`
+- `GEMINI_MODEL` (default: `gemini-3.5-flash`)
+
+The Brand Brief domain lives in `lib/briefs/`:
+
+- prompt/foundation question contextualization
+- Brand Brief synthesis
+- typed AI error handling and one automatic repair retry for invalid output
+- `project_briefs` queries and server actions
+- Zod validation for foundation answers, prompt analysis, and brief content
+
+Gemini calls are never made from client components. If the API is unavailable,
+returns invalid JSON, or is missing configuration, Clarity shows a
+product-friendly error with retry rather than generating a weaker local result.
+
+Phase 2 persists:
+
+- structured foundation answers
+- prompt analysis/question context
+- generated or edited Brand Brief JSON
+- brief summary, model, generation timestamp, and AI generation state
 
 ## Private Storage
 
@@ -85,7 +117,6 @@ state to the database.
 
 The following are intentionally deferred:
 
-- conversational brief
 - archetype recommendation
 - Color Palette Picker
 - typography backend

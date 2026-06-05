@@ -33,8 +33,8 @@ function firstNameFromUser(user: AuthUser) {
     metadataValue(user, "first_name") ||
     metadataValue(user, "name") ||
     metadataValue(user, "full_name");
-  const fallback = user.email?.split("@")[0].split(/[._-]/)[0] || "Designer";
-  const displayName = metadataName.trim() || fallback;
+  const defaultName = user.email?.split("@")[0].split(/[._-]/)[0] || "Designer";
+  const displayName = metadataName.trim() || defaultName;
 
   return displayName.split(/\s+/)[0] || "Designer";
 }

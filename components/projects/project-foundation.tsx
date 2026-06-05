@@ -6,15 +6,26 @@ import {
   readPendingFoundation,
   type PendingFoundationContext,
 } from "@/lib/design/pending-foundation";
+import type {
+  FoundationQuestionHelpActionResult,
+  FoundationQuestionsActionResult,
+} from "@/lib/briefs/actions";
+import type { FoundationQuestionHelpRequest } from "@/lib/briefs/types";
 import { GuidedProjectFoundation } from "@/components/projects/guided-project-foundation";
 import { ProjectForm } from "@/components/projects/project-form";
 
 export function ProjectFoundation({
   action,
   fromPreparation,
+  generateQuestions,
+  getQuestionHelp,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   fromPreparation: boolean;
+  generateQuestions?: (prompt: string) => Promise<FoundationQuestionsActionResult>;
+  getQuestionHelp?: (
+    request: FoundationQuestionHelpRequest,
+  ) => Promise<FoundationQuestionHelpActionResult>;
 }) {
   const [pendingContext, setPendingContext] =
     useState<PendingFoundationContext | null>(null);
@@ -37,7 +48,12 @@ export function ProjectFoundation({
   if (hasPreparationContext && pendingContext) {
     return (
       <div className="mx-auto flex min-h-[calc(100vh-56px)] w-full max-w-[980px] justify-center px-6 pb-16 pt-8">
-        <GuidedProjectFoundation action={action} context={pendingContext} />
+        <GuidedProjectFoundation
+          action={action}
+          context={pendingContext}
+          generateQuestions={generateQuestions}
+          getQuestionHelp={getQuestionHelp}
+        />
       </div>
     );
   }

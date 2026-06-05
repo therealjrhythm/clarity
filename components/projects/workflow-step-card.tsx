@@ -3,22 +3,29 @@ import { cn } from "@/lib/utils";
 import type { WorkflowStep } from "@/lib/design/workflow";
 
 const statusLabel = {
-  complete: "Complete",
   active: "In progress",
+  coming_soon: "Coming soon",
+  complete: "Complete",
+  final_check: "Final check",
+  in_review: "In review",
+  locked: "Upcoming",
   ready: "Ready",
   upcoming: "Upcoming",
-  coming_soon: "Coming soon",
 } satisfies Record<NonNullable<WorkflowStep["status"]>, string>;
 
 export function WorkflowStepCard({ step }: { step: WorkflowStep }) {
   const status = step.status || "upcoming";
-  const Icon = status === "complete" ? Check : status === "ready" ? Sparkles : Circle;
+  const Icon =
+    status === "complete" ? Check : status === "ready" ? Sparkles : Circle;
 
   return (
     <article
       className={cn(
         "rounded-[var(--radius)] border bg-background/45 p-4 transition-colors",
-        status === "ready" || status === "active"
+        status === "ready" ||
+          status === "active" ||
+          status === "in_review" ||
+          status === "final_check"
           ? "border-accent/40"
           : "border-line",
       )}

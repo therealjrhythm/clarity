@@ -1,4 +1,4 @@
-import { AIHelpButton } from "@/components/ai/ai-help-button";
+import { OverviewAIReviewButton } from "@/components/ai/overview-ai-review-button";
 import { FontPairingPreview } from "@/components/typography/font-pairing-preview";
 import { TypographySystemPreview } from "@/components/typography/typography-system-preview";
 import { Button } from "@/components/ui/button";
@@ -21,8 +21,10 @@ export const SAMPLE_TYPOGRAPHY_DIRECTION: TypographyDirection = {
 
 export function TypographyRecommendationCard({
   direction = SAMPLE_TYPOGRAPHY_DIRECTION,
+  projectId,
 }: {
   direction?: TypographyDirection;
+  projectId: string;
 }) {
   return (
     <article className="rounded-[var(--radius)] border border-line bg-surface p-4">
@@ -39,9 +41,12 @@ export function TypographyRecommendationCard({
         </span>
       </div>
       <div className="mt-4">
-        <AIHelpButton
-          description="In Phase 2, Clarity will recommend font systems, explain hierarchy tradeoffs, and prepare Google Fonts role selection."
-          sectionName="Typography System"
+        <OverviewAIReviewButton
+          description="Clarity reviews how the typography placeholder relates to the saved brief direction without generating typography yet."
+          projectId={projectId}
+          sectionContent={JSON.stringify(direction)}
+          sectionId="typography"
+          sectionTitle="Typography System"
           variant="secondary"
         />
       </div>

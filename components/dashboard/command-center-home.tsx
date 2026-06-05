@@ -2,11 +2,20 @@
 
 import Link from "next/link";
 import { Compass, Image, Palette, Sparkles } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_AI_MODEL_OPTION_ID } from "@/lib/ai/model-options";
 import { PromptBox } from "@/components/dashboard/prompt-box";
 import { PreparationChecklist } from "@/components/dashboard/preparation-checklist";
 import { PreparationPreview } from "@/components/dashboard/preparation-preview";
+import {
+  defaultDashboardGreetingParts,
+  getDashboardGreetingParts,
+} from "@/components/dashboard/dashboard-greeting";
+import type {
+  FoundationQuestionHelpActionResult,
+  FoundationQuestionsActionResult,
+} from "@/lib/briefs/actions";
+import type { FoundationQuestionHelpRequest } from "@/lib/briefs/types";
 import {
   clearPendingFoundation,
   type PendingFoundationContext,
@@ -21,6 +30,7 @@ type QuickAction = {
 };
 
 type PreparationState = "home" | "preparing" | "preview";
+type PreparedQuestions = Extract<FoundationQuestionsActionResult, { ok: true }>;
 
 const quickActions: QuickAction[] = [
   {
@@ -42,11 +52,17 @@ const quickActions: QuickAction[] = [
 
 export function CommandCenterHome({
   action,
+  generateQuestions,
+  getQuestionHelp,
   latestProject,
   name,
   resetKey,
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  generateQuestions?: (prompt: string) => Promise<FoundationQuestionsActionResult>;
+  getQuestionHelp?: (
+    request: FoundationQuestionHelpRequest,
+  ) => Promise<FoundationQuestionHelpActionResult>;
   latestProject?: Project;
   name: string;
   resetKey?: string;
@@ -57,12 +73,20 @@ export function CommandCenterHome({
     useState<PreparationState>("home");
   const [pendingSetup, setPendingSetup] =
     useState<PendingFoundationContext | null>(null);
-  const greeting = useMemo(() => "Let's find the direction", []);
+  const [preparedQuestions, setPreparedQuestions] =
+    useState<PreparedQuestions | null>(null);
+  const [preparationError, setPreparationError] = useState("");
+  const [analysisRunId, setAnalysisRunId] = useState(0);
+  const [greetingParts, setGreetingParts] = useState(() =>
+    defaultDashboardGreetingParts(name),
+  );
 
   const resetPreparation = useCallback(() => {
     clearPendingFoundation();
     setPrompt("");
     setPendingSetup(null);
+    setPreparedQuestions(null);
+    setPreparationError("");
     setPreparationState("home");
   }, []);
 
@@ -73,6 +97,19 @@ export function CommandCenterHome({
   useEffect(() => {
     resetPreparation();
   }, [resetKey, resetPreparation]);
+
+  useEffect(() => {
+    const maxRenderedLength = window.innerWidth < 900 ? 28 : undefined;
+
+    setGreetingParts(
+      getDashboardGreetingParts(
+        name,
+        window.localStorage,
+        new Date(),
+        maxRenderedLength,
+      ),
+    );
+  }, [name]);
 
   function startPreparation(title: string, source: PendingFoundationSource) {
     const trimmedTitle = title.trim();
@@ -86,8 +123,68 @@ export function CommandCenterHome({
       source,
       title: trimmedTitle,
     });
+    setPreparedQuestions(null);
+    setPreparationError("");
+    setAnalysisRunId(Date.now());
     setPreparationState("preparing");
   }
+
+  function retryAnalysis() {
+    setPreparedQuestions(null);
+    setPreparationError("");
+    setAnalysisRunId(Date.now());
+    setPreparationState("preparing");
+  }
+
+  useEffect(() => {
+    if (preparationState !== "preparing" || !pendingSetup) {
+      return;
+    }
+
+    let active = true;
+    if (!generateQuestions) {
+      setPreparationError(
+        "Clarity couldn’t analyze your project. Please try again.",
+      );
+      return () => {
+        active = false;
+      };
+    }
+
+    generateQuestions(pendingSetup.title)
+      .then((result) => {
+        if (!active) {
+          return;
+        }
+
+        if (result.ok) {
+          setPreparedQuestions(result);
+          return;
+        }
+
+        setPreparationError(result.error.message);
+      })
+      .catch(() => {
+        if (!active) {
+          return;
+        }
+
+        setPreparationError(
+          "Clarity couldn’t analyze your project. Please try again.",
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    analysisRunId,
+    generateQuestions,
+    pendingSetup,
+    pendingSetup?.createdAt,
+    pendingSetup?.title,
+    preparationState,
+  ]);
 
   if (preparationState !== "home" && pendingSetup) {
     const isPreparing = preparationState === "preparing";
@@ -103,8 +200,38 @@ export function CommandCenterHome({
           className="pointer-events-none absolute left-1/2 top-[38%] z-0 h-[520px] w-[760px] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(217,161,94,0.14),rgba(217,161,94,0.04)_42%,transparent_70%)] blur-[8px]"
         />
         <div className="relative z-10 flex w-full justify-center">
-          {isPreparing ? (
+          {preparationError ? (
+            <section className="w-full max-w-[560px] animate-[fadeUp_0.3s_ease] rounded-[22px] border border-line bg-surface p-6 text-left shadow-[0_24px_90px_rgba(0,0,0,0.3)]">
+              <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-accent">
+                Project Analysis
+              </p>
+              <h2 className="mt-3 text-2xl font-semibold tracking-[-0.02em]">
+                Clarity couldn’t analyze your project.
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-ink-muted">
+                {preparationError} Check your connection or try rephrasing your
+                prompt.
+              </p>
+              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+                <button
+                  className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-accent bg-accent px-5 py-2.5 text-sm font-semibold text-accent-foreground transition hover:bg-[#efbd78]"
+                  onClick={retryAnalysis}
+                  type="button"
+                >
+                  Retry analysis
+                </button>
+                <button
+                  className="inline-flex min-h-11 items-center justify-center rounded-[var(--radius)] border border-line bg-surface px-5 py-2.5 text-sm font-semibold text-foreground transition hover:border-line-strong hover:bg-surface-muted"
+                  onClick={resetPreparation}
+                  type="button"
+                >
+                  Back to prompt
+                </button>
+              </div>
+            </section>
+          ) : isPreparing ? (
             <PreparationChecklist
+              analysisReady={Boolean(preparedQuestions)}
               onDone={showPreparationPreview}
               title={pendingSetup.title}
             />
@@ -112,6 +239,9 @@ export function CommandCenterHome({
             <PreparationPreview
               action={action}
               context={pendingSetup}
+              generateQuestions={generateQuestions}
+              getQuestionHelp={getQuestionHelp}
+              initialQuestionResult={preparedQuestions}
               onBack={resetPreparation}
             />
           )}
@@ -127,12 +257,19 @@ export function CommandCenterHome({
         className="pointer-events-none absolute left-1/2 top-[38%] z-0 h-[520px] w-[760px] -translate-x-1/2 -translate-y-1/2 bg-[radial-gradient(ellipse_at_center,rgba(217,161,94,0.14),rgba(217,161,94,0.04)_42%,transparent_70%)] blur-[8px]"
       />
 
-      <section className="relative z-10 flex w-full max-w-[720px] flex-col items-center text-center">
-        <h1 className="mb-[26px] max-w-[620px] text-[30px] font-semibold leading-[1.1] tracking-[-0.025em] sm:text-[38px]">
-          {greeting}, <span className="text-accent">{name}</span>.
+      <section className="relative z-10 flex w-full max-w-[860px] flex-col items-center text-center">
+        <h1 className="mb-[26px] max-w-full whitespace-nowrap text-[28px] font-semibold leading-[1.1] tracking-[-0.025em] sm:text-[34px] xl:text-[38px]">
+          {greetingParts.map((part, index) => (
+            <span
+              className={part.accent ? "text-accent" : undefined}
+              key={`${part.text}-${index}`}
+            >
+              {part.text}
+            </span>
+          ))}
         </h1>
 
-        <div className="w-full">
+        <div className="w-full max-w-[720px]">
           <PromptBox
             modelId={modelId}
             onSubmit={() => {

@@ -2,18 +2,60 @@
 
 import Link from "next/link";
 import { ArrowRight, Check, LayoutGrid, Settings } from "lucide-react";
-import { useMemo, useState } from "react";
-import { Button, ButtonLink } from "@/components/ui/button";
+import { useMemo } from "react";
+import { ButtonLink } from "@/components/ui/button";
 import { StatusPill } from "@/components/ui/status-pill";
-import { getWorkflowStepsForStatus } from "@/lib/design/workflow";
+import { getWorkflowStepsForProject } from "@/lib/design/workflow";
+import type { ProjectBrief } from "@/lib/briefs/types";
+import { getBriefWorkflowStage } from "@/lib/briefs/workflow";
 import type { Project } from "@/types/project";
 
-export function ProjectFocusView({ project }: { project: Project }) {
-  const [messageVisible, setMessageVisible] = useState(false);
+export function ProjectFocusView({
+  project,
+  projectBrief,
+}: {
+  project: Project;
+  projectBrief: ProjectBrief | null;
+}) {
   const progress = useMemo(
-    () => getWorkflowStepsForStatus(project.status).slice(0, 4),
-    [project.status],
+    () => getWorkflowStepsForProject(project.status, projectBrief).slice(0, 4),
+    [project.status, projectBrief],
   );
+  const stage = getBriefWorkflowStage(projectBrief);
+  const focusCopy = {
+    brief_complete: {
+      body: "Use the approved Brand Brief to shape the strategic personality and creative identity direction.",
+      cta: "Start Archetype",
+      href: `/projects/${project.id}/archetype`,
+      kicker: "Approved direction",
+      summaryLabel: "Archetype guidance",
+      title: "Brand Archetype",
+    },
+    brief_in_review: {
+      body: "Review and approve the generated Brand Brief before moving into archetype direction.",
+      cta: "Review Brand Brief",
+      href: `/projects/${project.id}/brief`,
+      kicker: "Brief summary",
+      summaryLabel: "Brief summary",
+      title: "Review Brand Brief",
+    },
+    brief_ready: {
+      body: "Prepare the Brand Brief from your completed Foundation.",
+      cta: "Prepare Brand Brief",
+      href: `/projects/${project.id}/brief`,
+      kicker: "Project intent",
+      summaryLabel: "Project intent",
+      title: "Brand Brief",
+    },
+    final_check: {
+      body: "Review Clarity's summary of your brand direction before starting Archetype.",
+      cta: "Continue Final Check",
+      href: `/projects/${project.id}/brief/summary`,
+      kicker: "Final check",
+      summaryLabel: "Brand Brief Summary",
+      title: "Final Check",
+    },
+  }[stage];
 
   return (
     <div className="mx-auto flex min-h-[calc(100vh-56px)] w-full max-w-[860px] flex-col justify-center px-6 pb-16 pt-8">
@@ -41,32 +83,32 @@ export function ProjectFocusView({ project }: { project: Project }) {
           Recommended next
         </p>
         <h2 className="mt-4 text-3xl font-semibold tracking-[-0.02em]">
-          Brand Brief
+	          {focusCopy.title}
         </h2>
         <p className="mt-3 max-w-[610px] text-base leading-7 text-ink-muted">
-          Do this now: turn the project foundation into a sharper brief before
-          Clarity moves into archetype, color story, typography, and references.
+	          {focusCopy.body}
         </p>
 
         <div className="mt-6 rounded-[16px] border border-line bg-background/40 p-4">
           <p className="font-mono text-[10px] uppercase tracking-[0.13em] text-ink-subtle">
-            Project intent
+	            {focusCopy.summaryLabel}
           </p>
           <p className="mt-2 text-sm leading-6 text-foreground">
-            {project.description ||
-              "Add the audience, mood, constraints, and memorable moment before moving forward."}
+	            {projectBrief?.brand_brief_summary?.archetypeGuidance ||
+	              projectBrief?.summary ||
+	              project.description ||
+	              "Add the audience, mood, constraints, and memorable moment before moving forward."}
           </p>
         </div>
 
         <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Button
+          <ButtonLink
             className="min-h-11 px-5"
-            onClick={() => setMessageVisible(true)}
-            type="button"
-          >
-            Prepare Brand Brief
+	            href={focusCopy.href}
+	          >
+	            {focusCopy.cta}
             <ArrowRight size={16} aria-hidden />
-          </Button>
+          </ButtonLink>
           <ButtonLink
             href={`/projects/${project.id}?view=overview`}
             variant="secondary"
@@ -75,12 +117,6 @@ export function ProjectFocusView({ project }: { project: Project }) {
             See everything
           </ButtonLink>
         </div>
-
-        {messageVisible ? (
-          <p className="mt-4 rounded-[12px] border border-accent/25 bg-accent-soft px-4 py-3 text-sm font-medium text-foreground">
-            This guided step is prepared next.
-          </p>
-        ) : null}
       </section>
 
       <section className="mt-6 rounded-[18px] border border-line bg-surface p-5">
@@ -118,11 +154,17 @@ export function ProjectFocusView({ project }: { project: Project }) {
                 </span>
               </div>
               <p className="mt-2 text-[11px] text-ink-muted">
-                {step.status === "complete"
-                  ? "Complete"
-                  : step.status === "ready"
-                    ? "Recommended next"
-                    : "Upcoming"}
+	                {step.status === "complete"
+	                  ? "Complete"
+	                  : step.status === "ready"
+	                    ? "Recommended next"
+	                    : step.status === "in_review"
+	                      ? "In review"
+	                      : step.status === "final_check"
+	                        ? "Final check"
+	                        : step.status === "locked"
+	                          ? "Upcoming"
+	                          : "Upcoming"}
               </p>
             </div>
           ))}

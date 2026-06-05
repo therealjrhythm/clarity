@@ -2,11 +2,21 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { DesignDirectionBoard } from "@/components/projects/design-direction-board";
 import { ProjectPhaseRail } from "@/components/projects/project-phase-rail";
+import { getWorkflowStepsForProject } from "@/lib/design/workflow";
+import type { ProjectBrief } from "@/lib/briefs/types";
 import type { Project } from "@/types/project";
 
-export function ProjectOverviewBoard({ project }: { project: Project }) {
+export function ProjectOverviewBoard({
+  project,
+  projectBrief,
+}: {
+  project: Project;
+  projectBrief: ProjectBrief | null;
+}) {
+  const phases = getWorkflowStepsForProject(project.status, projectBrief);
+
   return (
-    <div className="mx-auto w-full max-w-[1280px] px-6 pb-16 pt-6">
+    <main className="mx-auto min-h-[calc(100vh-56px)] w-full max-w-[1280px] overflow-visible px-6 pb-20 pt-6">
       <div className="mb-5 flex items-center justify-between gap-4">
         <div>
           <p className="font-mono text-[11px] uppercase tracking-[0.13em] text-accent">
@@ -26,9 +36,11 @@ export function ProjectOverviewBoard({ project }: { project: Project }) {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-        <DesignDirectionBoard project={project} />
-        <ProjectPhaseRail status={project.status} />
+        <DesignDirectionBoard project={project} projectBrief={projectBrief} />
+        <div className="xl:sticky xl:top-6 xl:self-start">
+          <ProjectPhaseRail phases={phases} status={project.status} />
+        </div>
       </div>
-    </div>
+    </main>
   );
 }

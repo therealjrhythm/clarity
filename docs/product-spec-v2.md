@@ -2012,7 +2012,8 @@ These decisions can wait until implementation reaches the relevant phase:
 
 Recommended defaults:
 
-- Use AI + deterministic algorithms for palette generation.
+- Use validated AI generation for user-facing outputs; if generation fails,
+  show a retryable error rather than lower-quality substitute content.
 - Export React/Next.js and static HTML first.
 - Use root `DESIGN.md` for Clarity’s own app UI.
 - Give beta users limited free credits.
@@ -2112,4 +2113,3 @@ That is enough to become a real product.
 The guiding promise:
 
 > **Clarity turns taste into a system and a system into production-ready design.**
-

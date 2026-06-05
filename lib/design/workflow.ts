@@ -1,4 +1,9 @@
 import type { ProjectStatus } from "@/types/project";
+import {
+  getBriefWorkflowStage,
+  type BriefWorkflowStage,
+} from "@/lib/briefs/workflow";
+import type { ProjectBrief } from "@/lib/briefs/types";
 
 export type WorkflowStepId =
   | "foundation"
@@ -13,7 +18,15 @@ export type WorkflowStepId =
   | "preview"
   | "export";
 
-export type WorkflowStatus = "complete" | "active" | "ready" | "upcoming" | "coming_soon";
+export type WorkflowStatus =
+  | "active"
+  | "coming_soon"
+  | "complete"
+  | "final_check"
+  | "in_review"
+  | "locked"
+  | "ready"
+  | "upcoming";
 
 export type WorkflowStep = {
   id: WorkflowStepId;
@@ -118,6 +131,46 @@ export function getWorkflowStepsForStatus(status: ProjectStatus): WorkflowStep[]
       stepStatus = "complete";
     } else if (index === activeIndex) {
       stepStatus = status === "draft" ? "ready" : "active";
+    }
+
+    return {
+      ...step,
+      status: stepStatus,
+    };
+  });
+}
+
+function briefWorkflowStatus(stage: BriefWorkflowStage): WorkflowStatus {
+  if (stage === "brief_complete") {
+    return "complete";
+  }
+
+  if (stage === "final_check") {
+    return "final_check";
+  }
+
+  if (stage === "brief_in_review") {
+    return "in_review";
+  }
+
+  return "ready";
+}
+
+export function getWorkflowStepsForProject(
+  status: ProjectStatus,
+  projectBrief: ProjectBrief | null,
+): WorkflowStep[] {
+  const stage = getBriefWorkflowStage(projectBrief);
+
+  return WORKFLOW_STEPS.map((step) => {
+    let stepStatus: WorkflowStatus = "upcoming";
+
+    if (step.id === "foundation") {
+      stepStatus = status === "archived" ? "active" : "complete";
+    } else if (step.id === "brief") {
+      stepStatus = briefWorkflowStatus(stage);
+    } else if (step.id === "archetype") {
+      stepStatus = stage === "brief_complete" ? "ready" : "locked";
     }
 
     return {

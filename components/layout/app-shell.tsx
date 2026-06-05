@@ -18,7 +18,7 @@ export function AppShell({
   return (
     <div className="flex h-screen w-full overflow-hidden bg-background">
       <AppSidebar email={email} name={name} projects={projects} />
-      <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden bg-background">
+      <main className="relative flex min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-background">
         <header className="relative z-30 flex h-14 shrink-0 items-center justify-between px-[18px]">
           <div />
           <NewProjectEntry

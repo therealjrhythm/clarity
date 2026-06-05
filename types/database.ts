@@ -76,6 +76,48 @@ export type Database = {
         };
         Relationships: [];
       };
+      project_briefs: {
+        Row: {
+          id: string;
+          project_id: string;
+          foundation_answers: Json;
+          prompt_analysis: Json;
+          brief: Json;
+          summary: string | null;
+          status: "draft" | "generated" | "edited";
+          model: string | null;
+          ai_state: Json;
+          generated_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          project_id: string;
+          foundation_answers?: Json;
+          prompt_analysis?: Json;
+          brief?: Json;
+          summary?: string | null;
+          status?: "draft" | "generated" | "edited";
+          model?: string | null;
+          ai_state?: Json;
+          generated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          foundation_answers?: Json;
+          prompt_analysis?: Json;
+          brief?: Json;
+          summary?: string | null;
+          status?: "draft" | "generated" | "edited";
+          model?: string | null;
+          ai_state?: Json;
+          generated_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       usage_ledger: {
         Row: {
           id: string;

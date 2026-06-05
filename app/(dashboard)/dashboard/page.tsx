@@ -1,5 +1,9 @@
 import { CommandCenterHome } from "@/components/dashboard/command-center-home";
 import { requireUser } from "@/lib/auth/require-user";
+import {
+  generateFoundationQuestionsAction,
+  getFoundationQuestionHelpAction,
+} from "@/lib/briefs/actions";
 import { createProject } from "@/lib/projects/actions";
 import { listProjects } from "@/lib/projects/queries";
 
@@ -15,10 +19,10 @@ function firstNameFromUser(user: AuthUser) {
     metadataValue(user, "first_name") ||
     metadataValue(user, "name") ||
     metadataValue(user, "full_name");
-  const fallback = user.email?.split("@")[0].split(/[._-]/)[0] || "Designer";
-  const displayName = metadataName.trim() || fallback;
+  const defaultName = user.email?.split("@")[0].split(/[._-]/)[0] || "there";
+  const displayName = metadataName.trim() || defaultName;
 
-  return displayName.split(/\s+/)[0] || "Designer";
+  return displayName.split(/\s+/)[0] || "there";
 }
 
 export default async function DashboardPage({
@@ -35,6 +39,8 @@ export default async function DashboardPage({
   return (
     <CommandCenterHome
       action={createProject}
+      generateQuestions={generateFoundationQuestionsAction}
+      getQuestionHelp={getFoundationQuestionHelpAction}
       latestProject={latestProject}
       name={name}
       resetKey={resolvedSearchParams.new}

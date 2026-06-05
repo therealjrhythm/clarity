@@ -80,7 +80,7 @@ export type MotionDirection = {
   name: string;
   intensity: "none" | "subtle" | "expressive";
   behaviors: string[];
-  reducedMotionFallback: string;
+  reducedMotionAlternative: string;
 };
 
 export type ArtDirection = {

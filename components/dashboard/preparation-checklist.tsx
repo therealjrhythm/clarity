@@ -5,10 +5,10 @@ import { useEffect, useState } from "react";
 
 const CHECKLIST_STEPS = [
   "Reading your intent",
-  "Mapping the brand archetype",
-  "Composing color stories",
-  "Setting the typography system",
-  "Preparing your workspace",
+  "Synthesizing your project context",
+  "Identifying key foundation questions",
+  "Mapping possible brand directions",
+  "Preparing your guided foundation",
 ];
 
 function prefersReducedMotion() {
@@ -19,33 +19,52 @@ function prefersReducedMotion() {
 }
 
 export function PreparationChecklist({
+  analysisReady,
   onDone,
   title,
 }: {
+  analysisReady: boolean;
   onDone: () => void;
   title: string;
 }) {
   const [activeStep, setActiveStep] = useState(0);
+  const [minimumSequenceDone, setMinimumSequenceDone] = useState(false);
+  const [hasCompleted, setHasCompleted] = useState(false);
 
   useEffect(() => {
     if (prefersReducedMotion()) {
-      setActiveStep(CHECKLIST_STEPS.length);
-      const done = window.setTimeout(onDone, 260);
+      setActiveStep(CHECKLIST_STEPS.length - 1);
+      const done = window.setTimeout(() => setMinimumSequenceDone(true), 180);
       return () => window.clearTimeout(done);
     }
 
-    const stepMs = 430;
-    const doneMs = stepMs * CHECKLIST_STEPS.length + 260;
+    setActiveStep(0);
+    setMinimumSequenceDone(false);
+    setHasCompleted(false);
+
+    const stepMs = 500;
     const stepInterval = window.setInterval(() => {
-      setActiveStep((step) => Math.min(step + 1, CHECKLIST_STEPS.length));
+      setActiveStep((step) => Math.min(step + 1, CHECKLIST_STEPS.length - 1));
     }, stepMs);
-    const done = window.setTimeout(onDone, doneMs);
+    const done = window.setTimeout(() => {
+      window.clearInterval(stepInterval);
+      setMinimumSequenceDone(true);
+    }, stepMs * CHECKLIST_STEPS.length + 280);
 
     return () => {
       window.clearInterval(stepInterval);
       window.clearTimeout(done);
     };
-  }, [onDone]);
+  }, []);
+
+  useEffect(() => {
+    if (!minimumSequenceDone || !analysisReady || hasCompleted) {
+      return;
+    }
+
+    setHasCompleted(true);
+    onDone();
+  }, [analysisReady, hasCompleted, minimumSequenceDone, onDone]);
 
   return (
     <div

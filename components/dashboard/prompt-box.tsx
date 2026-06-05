@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ArrowUp, Mic, Plus } from "lucide-react";
-import { ModelPillSelector } from "@/components/ai/model-selector";
+import { ArrowUp, Mic, Plus, Sparkles } from "lucide-react";
 
 export function PromptBox({
   modelId,
@@ -17,6 +16,9 @@ export function PromptBox({
   setValue: (value: string) => void;
   value: string;
 }) {
+  void modelId;
+  void setModelId;
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const canSubmit = value.trim().length > 0;
 
@@ -58,7 +60,10 @@ export function PromptBox({
           >
             <Plus size={19} aria-hidden />
           </button>
-          <ModelPillSelector selectedId={modelId} setSelectedId={setModelId} />
+          <span className="inline-flex h-[34px] items-center gap-[7px] rounded-full border border-line bg-surface-muted px-[11px] text-[13px] font-medium text-ink-muted">
+            <Sparkles size={14} aria-hidden className="text-accent" />
+            AI-guided
+          </span>
         </div>
         <div className="flex items-center gap-1.5">
           <button

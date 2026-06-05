@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Layers3, LogOut, PanelLeft, Plus, Search } from "lucide-react";
+import { Layers3, LogOut, PanelLeft, Plus, Search, Trash2 } from "lucide-react";
 import { signOut } from "@/lib/auth/actions";
+import { archiveProjectFromForm } from "@/lib/projects/actions";
 import { NewProjectEntry } from "@/components/layout/new-project-entry";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/types/project";
@@ -37,34 +38,63 @@ function ProjectRow({
   project: Project;
 }) {
   return (
-    <Link
+    <div
       className={cn(
-        "flex w-full items-center gap-[11px] rounded-[10px] px-3 py-2 text-left transition-colors duration-[140ms] hover:bg-surface",
-        collapsed && "justify-center px-0",
+        "group relative flex w-full items-center overflow-hidden rounded-[10px] transition-colors duration-[140ms] hover:bg-surface",
+        collapsed && "justify-center",
         isActive && "bg-surface",
       )}
-      href={`/projects/${project.id}`}
-      title={project.name}
     >
-      <span className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-[7px] bg-accent-soft text-accent">
-        <Layers3 size={15} aria-hidden />
-      </span>
+      <Link
+        className={cn(
+          "flex min-w-0 flex-1 items-center gap-[11px] px-3 py-2 text-left",
+          collapsed && "justify-center px-0",
+          !collapsed && "pr-10",
+        )}
+        href={`/projects/${project.id}`}
+        title={project.name}
+      >
+        <span className="grid h-[26px] w-[26px] shrink-0 place-items-center rounded-[7px] bg-accent-soft text-accent">
+          <Layers3 size={15} aria-hidden />
+        </span>
+        {!collapsed ? (
+          <>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13.5px] font-medium text-foreground">
+                {project.name}
+              </span>
+              <span className="block truncate text-[11.5px] text-ink-subtle">
+                {projectMeta(project)}
+              </span>
+            </span>
+            {isActive ? (
+              <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent shadow-[0_0_8px_rgba(217,161,94,0.6)] transition-opacity group-hover:opacity-0" />
+            ) : null}
+          </>
+        ) : null}
+      </Link>
       {!collapsed ? (
-        <>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13.5px] font-medium text-foreground">
-              {project.name}
-            </span>
-            <span className="block truncate text-[11.5px] text-ink-subtle">
-              {projectMeta(project)}
-            </span>
-          </span>
-          {isActive ? (
-            <span className="h-[7px] w-[7px] shrink-0 rounded-full bg-accent shadow-[0_0_8px_rgba(217,161,94,0.6)]" />
-          ) : null}
-        </>
+        <form
+          action={archiveProjectFromForm}
+          className="absolute right-1 top-1/2 -translate-y-1/2"
+          onSubmit={(event) => {
+            if (!window.confirm(`Delete "${project.name}" from your projects?`)) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <input name="projectId" type="hidden" value={project.id} />
+          <button
+            aria-label={`Delete ${project.name}`}
+            className="grid h-7 w-7 place-items-center rounded-[8px] text-red-300/80 transition-colors hover:bg-red-500/10 hover:text-red-200"
+            title="Delete project"
+            type="submit"
+          >
+            <Trash2 size={14} aria-hidden />
+          </button>
+        </form>
       ) : null}
-    </Link>
+    </div>
   );
 }
 

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+- Added Phase 2 AI-assisted Brand Brief with Gemini 3.5 Flash.
+- Added `project_briefs` persistence for structured foundation answers,
+  prompt analysis, editable brief content, model metadata, and AI generation state.
+- Added ownership-safe Brand Brief route, queries, and server actions for
+  generate, regenerate, edit, and save behavior.
+- Added API-only AI generation with response validation, one automatic repair
+  retry, and product-friendly retry errors when generation fails.
 - Repositioned the dashboard and project detail experience as a dark premium design-system workspace.
 - Added UI-only AI Help, model selector, workflow, typography, and color story preparation surfaces.
 - Preserved existing Supabase SSR auth, protected routes, project ownership checks, and Phase 1 database schema.

@@ -1,8 +1,7 @@
 # Clarity Database Schema
 
-Phase 1 creates only the Modern Foundation schema. It supports Supabase Auth,
-app-level profiles, owned projects, private storage conventions, and a usage
-ledger scaffold.
+Phase 1 creates the Modern Foundation schema. Phase 2 adds the first
+ownership-scoped design artifact table for AI-assisted Brand Briefs.
 
 ## Phase 1 Tables
 
@@ -59,14 +58,40 @@ Fields:
 - `metadata`
 - `created_at`
 
+## Phase 2 Tables
+
+### `project_briefs`
+
+One Brand Brief record per owned project. This table stores the structured
+foundation answers, prompt analysis, generated or edited brief content, and
+AI generation state for the Brand Brief slice. It is separate from `projects` so
+future design artifacts do not collapse into project metadata.
+
+Fields:
+
+- `id`
+- `project_id`
+- `foundation_answers`
+- `prompt_analysis`
+- `brief`
+- `summary`
+- `status`
+- `model`
+- `ai_state`
+- `generated_at`
+- `created_at`
+- `updated_at`
+
 ## RLS
 
-The migration enables RLS on all Phase 1 tables.
+The migrations enable RLS on all current tables.
 
 - Profiles are readable and updatable only by the matching authenticated user.
 - Projects are readable, insertable, updatable, and deletable only by the owner.
 - Usage ledger rows are readable by the owning user. Writes are intentionally
   reserved for future server-controlled flows.
+- Project briefs are readable, insertable, updatable, and deletable only when
+  the authenticated user owns the associated project.
 
 Application server actions also verify ownership before project detail, update,
 and archive operations.
@@ -97,7 +122,6 @@ Do not add broad direct client writes for generated artifacts or exports.
 
 Later phases should add separate ownership-scoped tables for:
 
-- `project_briefs`
 - `visual_directions`
 - `color_palettes`
 - `references`

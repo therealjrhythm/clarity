@@ -1,4 +1,4 @@
-import { AIHelpButton } from "@/components/ai/ai-help-button";
+import { OverviewAIReviewButton } from "@/components/ai/overview-ai-review-button";
 import { PaletteMiniUI } from "@/components/palette/palette-mini-ui";
 import { PalettePreview } from "@/components/palette/palette-preview";
 import { PaletteRoleGrid } from "@/components/palette/palette-role-grid";
@@ -24,7 +24,13 @@ export const SAMPLE_COLOR_STORY: ColorStory = {
   ],
 };
 
-export function PaletteStoryCard({ story = SAMPLE_COLOR_STORY }: { story?: ColorStory }) {
+export function PaletteStoryCard({
+  projectId,
+  story = SAMPLE_COLOR_STORY,
+}: {
+  projectId: string;
+  story?: ColorStory;
+}) {
   return (
     <article className="rounded-[var(--radius)] border border-line bg-surface p-4">
       <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
@@ -40,9 +46,12 @@ export function PaletteStoryCard({ story = SAMPLE_COLOR_STORY }: { story?: Color
         </span>
       </div>
       <div className="mt-4">
-        <AIHelpButton
-          description="In Phase 2, Clarity will recommend color stories, explain palette choices, generate variations, and help lock or adjust semantic color roles."
-          sectionName="Color Story"
+        <OverviewAIReviewButton
+          description="Clarity reviews how the color-story placeholder relates to the saved brief direction without generating a palette yet."
+          projectId={projectId}
+          sectionContent={JSON.stringify(story)}
+          sectionId="color-story"
+          sectionTitle="Color Story"
           variant="secondary"
         />
       </div>

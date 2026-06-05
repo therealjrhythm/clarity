@@ -5,15 +5,24 @@ import {
 } from "@/lib/design/workflow";
 
 const statusLabel = {
-  complete: "Complete",
   active: "In progress",
+  coming_soon: "Coming soon",
+  complete: "Complete",
+  final_check: "Final check",
+  in_review: "In review",
+  locked: "Upcoming",
   ready: "Ready",
   upcoming: "Upcoming",
-  coming_soon: "Coming soon",
 } satisfies Record<NonNullable<WorkflowStep["status"]>, string>;
 
-export function ProjectPhaseRail({ status = "draft" }: { status?: ProjectStatus }) {
-  const phases = getWorkflowStepsForStatus(status);
+export function ProjectPhaseRail({
+  phases,
+  status = "draft",
+}: {
+  phases?: WorkflowStep[];
+  status?: ProjectStatus;
+}) {
+  const visiblePhases = phases || getWorkflowStepsForStatus(status);
 
   return (
     <aside className="rounded-[var(--radius)] border border-line bg-surface p-4 shadow-[0_18px_60px_rgba(0,0,0,0.2)]">
@@ -22,7 +31,7 @@ export function ProjectPhaseRail({ status = "draft" }: { status?: ProjectStatus 
         The next creative modules are visible now and prepared for Phase 2.
       </p>
       <div className="mt-4 grid gap-2">
-        {phases.map((phase) => (
+        {visiblePhases.map((phase) => (
           <div
             className="flex items-center justify-between gap-3 rounded-[var(--radius)] border border-line bg-background/45 px-3 py-2"
             key={phase.id}

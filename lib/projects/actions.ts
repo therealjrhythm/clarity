@@ -6,10 +6,22 @@ import { requireUser } from "@/lib/auth/require-user";
 import { createClient } from "@/lib/supabase/server";
 import { parseProjectForm } from "@/lib/projects/validators";
 import { requireOwnedProject } from "@/lib/projects/ownership";
+import {
+  parseFoundationAnswersField,
+  parsePromptAnalysisField,
+} from "@/lib/briefs/validators";
+import { isProjectBriefsStorageMissing } from "@/lib/briefs/storage-errors";
+import type { Json } from "@/types/database";
+
+function json(value: unknown): Json {
+  return value as Json;
+}
 
 export async function createProject(formData: FormData) {
   const user = await requireUser();
   const payload = parseProjectForm(formData);
+  const foundationAnswers = parseFoundationAnswersField(formData);
+  const promptAnalysis = parsePromptAnalysisField(formData);
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -26,6 +38,25 @@ export async function createProject(formData: FormData) {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (foundationAnswers) {
+    const { error: briefError } = await supabase.from("project_briefs").insert({
+      ai_state: json({
+        foundation: {
+          source: promptAnalysis?.source || "api",
+        },
+      }),
+      foundation_answers: json(foundationAnswers),
+      project_id: data.id,
+      prompt_analysis: json(promptAnalysis || {}),
+      status: "draft",
+      summary: promptAnalysis?.summary || payload.description,
+    });
+
+    if (briefError && !isProjectBriefsStorageMissing(briefError)) {
+      throw new Error(briefError.message);
+    }
   }
 
   revalidatePath("/dashboard");
@@ -77,4 +108,14 @@ export async function archiveProject(projectId: string) {
 
   revalidatePath("/dashboard");
   redirect("/dashboard");
+}
+
+export async function archiveProjectFromForm(formData: FormData) {
+  const projectId = String(formData.get("projectId") || "").trim();
+
+  if (!projectId) {
+    throw new Error("Project id is required.");
+  }
+
+  await archiveProject(projectId);
 }
